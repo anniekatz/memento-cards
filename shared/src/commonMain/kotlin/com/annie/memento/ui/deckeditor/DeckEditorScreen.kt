@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -45,6 +47,7 @@ import com.annie.memento.ui.components.SquarePhotoField
 import com.annie.memento.ui.components.dismissKeyboardGestures
 import com.annie.memento.ui.navigation.Navigator
 import com.annie.memento.ui.theme.InsetShape
+import com.annie.memento.ui.theme.PanelShape
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -207,7 +210,7 @@ fun DeckEditorScreen(navigator: Navigator, deckId: Long?) {
                 }
             }
 
-            SectionCard(Modifier.fillMaxWidth()) {
+            UnclippedSectionCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
@@ -245,7 +248,7 @@ fun DeckEditorScreen(navigator: Navigator, deckId: Long?) {
                 }
             }
 
-            SectionCard(Modifier.fillMaxWidth()) {
+            UnclippedSectionCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     SectionTitle("Tags (optional)")
                     Text(
@@ -274,6 +277,21 @@ fun DeckEditorScreen(navigator: Navigator, deckId: Long?) {
 @Composable
 private fun SectionTitle(text: String) {
     SectionHeader(text)
+}
+
+// iOS rendering bug fix? https://github.com/JetBrains/compose-multiplatform/issues/4937
+@Composable
+private fun UnclippedSectionCard(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    Box(
+        modifier
+            .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant), PanelShape)
+            .background(MaterialTheme.colorScheme.surfaceContainer, PanelShape),
+    ) {
+        content()
+    }
 }
 
 @Composable
