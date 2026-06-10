@@ -1,0 +1,33 @@
+CREATE TABLE deckLevel (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    deckId INTEGER NOT NULL,
+    position INTEGER NOT NULL,
+    name TEXT,
+    color INTEGER,
+    FOREIGN KEY (deckId) REFERENCES deck(id) ON DELETE CASCADE
+);
+
+CREATE INDEX deckLevel_deckId ON deckLevel(deckId);
+
+insertLevel:
+INSERT INTO deckLevel(deckId, position, name, color)
+VALUES (?, ?, ?, ?);
+
+selectLevelsByDeck:
+SELECT *
+FROM deckLevel
+WHERE deckId = ?
+ORDER BY position ASC;
+
+updateLevel:
+UPDATE deckLevel
+SET position = ?, name = ?, color = ?
+WHERE id = ?;
+
+deleteLevel:
+DELETE FROM deckLevel
+WHERE id = ?;
+
+deleteLevelsByDeck:
+DELETE FROM deckLevel
+WHERE deckId = ?;

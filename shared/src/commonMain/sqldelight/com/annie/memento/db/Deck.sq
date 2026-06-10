@@ -1,0 +1,46 @@
+CREATE TABLE deck (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    frontName TEXT NOT NULL,
+    backName TEXT NOT NULL,
+    isHierarchical INTEGER NOT NULL,
+    description TEXT,
+    photoPaths TEXT
+);
+
+insertDeck:
+INSERT INTO deck(name, frontName, backName, isHierarchical, description, photoPaths)
+VALUES (?, ?, ?, ?, ?, ?);
+
+lastInsertRowId:
+SELECT last_insert_rowid();
+
+selectDeck:
+SELECT *
+FROM deck
+WHERE id = ?;
+
+-- Decks for the home list, each with live child counts. Newest first.
+selectDeckSummaries:
+SELECT
+    deck.id,
+    deck.name,
+    deck.frontName,
+    deck.backName,
+    deck.isHierarchical,
+    deck.description,
+    deck.photoPaths,
+    (SELECT COUNT(*) FROM card WHERE card.deckId = deck.id) AS cardCount,
+    (SELECT COUNT(*) FROM tag WHERE tag.deckId = deck.id) AS tagCount,
+    (SELECT COUNT(*) FROM deckLevel WHERE deckLevel.deckId = deck.id) AS levelCount
+FROM deck
+ORDER BY deck.id DESC;
+
+updateDeck:
+UPDATE deck
+SET name = ?, frontName = ?, backName = ?, isHierarchical = ?, description = ?, photoPaths = ?
+WHERE id = ?;
+
+deleteDeck:
+DELETE FROM deck
+WHERE id = ?;

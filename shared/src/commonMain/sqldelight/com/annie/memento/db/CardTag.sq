@@ -1,0 +1,33 @@
+-- m 2 m cards and tags
+CREATE TABLE cardTag (
+    cardId INTEGER NOT NULL,
+    tagId INTEGER NOT NULL,
+    PRIMARY KEY (cardId, tagId),
+    FOREIGN KEY (cardId) REFERENCES card(id) ON DELETE CASCADE,
+    FOREIGN KEY (tagId) REFERENCES tag(id) ON DELETE CASCADE
+);
+
+CREATE INDEX cardTag_tagId ON cardTag(tagId);
+
+insertCardTag:
+INSERT OR IGNORE INTO cardTag(cardId, tagId)
+VALUES (?, ?);
+
+deleteCardTagsByCard:
+DELETE FROM cardTag
+WHERE cardId = ?;
+
+deleteCardTagsByDeck:
+DELETE FROM cardTag
+WHERE cardId IN (SELECT id FROM card WHERE deckId = ?);
+
+selectTagIdsByCard:
+SELECT tagId
+FROM cardTag
+WHERE cardId = ?;
+
+selectCardTagsByDeck:
+SELECT cardTag.cardId, cardTag.tagId
+FROM cardTag
+JOIN card ON card.id = cardTag.cardId
+WHERE card.deckId = ?;

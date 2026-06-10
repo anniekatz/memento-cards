@@ -1,0 +1,80 @@
+CREATE TABLE card (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    deckId INTEGER NOT NULL,
+    levelId INTEGER,
+    frontText TEXT NOT NULL,
+    frontNotes TEXT,
+    frontImagePath TEXT,
+    frontAudioPath TEXT,
+    backText TEXT NOT NULL,
+    backNotes TEXT,
+    backImagePath TEXT,
+    backAudioPath TEXT,
+    frontExamples TEXT,
+    backExamples TEXT,
+    frontRichText INTEGER NOT NULL DEFAULT 0,
+    backRichText INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (deckId) REFERENCES deck(id) ON DELETE CASCADE,
+    FOREIGN KEY (levelId) REFERENCES deckLevel(id) ON DELETE SET NULL
+);
+
+CREATE INDEX card_deckId ON card(deckId);
+CREATE INDEX card_levelId ON card(levelId);
+
+insertCard:
+INSERT INTO card(
+    deckId, levelId,
+    frontText, frontNotes, frontImagePath, frontAudioPath,
+    backText, backNotes, backImagePath, backAudioPath,
+    frontExamples, backExamples,
+    frontRichText, backRichText
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+selectCardsByDeck:
+SELECT *
+FROM card
+WHERE deckId = ?
+ORDER BY id ASC;
+
+selectCard:
+SELECT *
+FROM card
+WHERE id = ?;
+
+updateCard:
+UPDATE card
+SET levelId = ?,
+    frontText = ?, frontNotes = ?, frontImagePath = ?, frontAudioPath = ?,
+    backText = ?, backNotes = ?, backImagePath = ?, backAudioPath = ?,
+    frontExamples = ?, backExamples = ?,
+    frontRichText = ?, backRichText = ?
+WHERE id = ?;
+
+updateCardLevel:
+UPDATE card
+SET levelId = ?
+WHERE id = ?;
+
+setLevelOnUnleveledCards:
+UPDATE card
+SET levelId = ?
+WHERE deckId = ? AND levelId IS NULL;
+
+deleteCard:
+DELETE FROM card
+WHERE id = ?;
+
+deleteCardsByDeck:
+DELETE FROM card
+WHERE deckId = ?;
+
+clearLevelOnCards:
+UPDATE card
+SET levelId = NULL
+WHERE levelId = ?;
+
+clearLevelForDeck:
+UPDATE card
+SET levelId = NULL
+WHERE deckId = ?;

@@ -1,0 +1,32 @@
+CREATE TABLE tag (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    deckId INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    color INTEGER,
+    FOREIGN KEY (deckId) REFERENCES deck(id) ON DELETE CASCADE
+);
+
+CREATE INDEX tag_deckId ON tag(deckId);
+
+insertTag:
+INSERT INTO tag(deckId, name, color)
+VALUES (?, ?, ?);
+
+selectTagsByDeck:
+SELECT *
+FROM tag
+WHERE deckId = ?
+ORDER BY id ASC;
+
+updateTag:
+UPDATE tag
+SET name = ?, color = ?
+WHERE id = ?;
+
+deleteTag:
+DELETE FROM tag
+WHERE id = ?;
+
+deleteTagsByDeck:
+DELETE FROM tag
+WHERE deckId = ?;

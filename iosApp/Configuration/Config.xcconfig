@@ -1,0 +1,8 @@
+PRODUCT_NAME=Memento
+PRODUCT_BUNDLE_IDENTIFIER=dev.annie.memento
+
+CURRENT_PROJECT_VERSION=1
+MARKETING_VERSION=1.0
+
+// link sqldelkight native driver
+OTHER_LDFLAGS = $(inherited) -lsqlite3
