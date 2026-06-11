@@ -138,15 +138,22 @@ fun DeckDetailScreen(navigator: Navigator, deckId: Long) {
     PlatformBackHandler(enabled = selectionMode) { selectedIds = emptySet() }
 
     var searchQuery by remember { mutableStateOf("") }
+    var filters by remember { mutableStateOf(CardFilters()) }
+    var filtersExpanded by remember { mutableStateOf(false) }
     val query = searchQuery.trim()
     val searchIndex = remember(cards) { lazy { cards.associate { it.id to cardSearchText(it) } } }
-    val visibleCards = remember(cards, query) {
-        if (query.isEmpty()) {
-            cards.withIndex().toList()
-        } else {
-            val index = searchIndex.value
-            cards.withIndex().filter { index[it.value.id]?.contains(query, ignoreCase = true) == true }
+    val visibleCards = remember(cards, query, filters) {
+        val index = if (query.isEmpty()) null else searchIndex.value
+        cards.withIndex().filter { (_, card) ->
+            (index == null || index[card.id]?.contains(query, ignoreCase = true) == true) && filters.matches(card)
         }
+    }
+
+    // drop filters for deleted lvls/tags
+    LaunchedEffect(details) {
+        val d = details ?: return@LaunchedEffect
+        val pruned = filters.pruned(d.levels.mapTo(mutableSetOf()) { it.id }, d.tags.mapTo(mutableSetOf()) { it.id })
+        if (pruned != filters) filters = pruned
     }
 
     MementoScaffold(
@@ -230,7 +237,7 @@ fun DeckDetailScreen(navigator: Navigator, deckId: Long) {
                     "Cards",
                     trailing = when {
                         cards.isEmpty() -> "empty"
-                        query.isNotEmpty() -> "${visibleCards.size} of ${cards.size}"
+                        query.isNotEmpty() || filters.isActive -> "${visibleCards.size} of ${cards.size}"
                         else -> "${cards.size}"
                     },
                     modifier = Modifier.padding(top = 6.dp, bottom = 2.dp),
@@ -255,6 +262,15 @@ fun DeckDetailScreen(navigator: Navigator, deckId: Long) {
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    FilterPanel(
+                        details = current,
+                        filters = filters,
+                        expanded = filtersExpanded,
+                        onToggleExpanded = { filtersExpanded = !filtersExpanded },
+                        onFiltersChange = { filters = it },
                     )
                 }
             }
@@ -298,11 +314,24 @@ fun DeckDetailScreen(navigator: Navigator, deckId: Long) {
                             Text("∅", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
                             Text("No matches", style = MaterialTheme.typography.titleSmall)
                             Text(
-                                "No cards contain “$query”.",
+                                when {
+                                    query.isNotEmpty() && filters.isActive -> "No cards contain “$query” and match the filters."
+                                    query.isNotEmpty() -> "No cards contain “$query”."
+                                    else -> "No cards match the filters."
+                                },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center,
                             )
+                            if (filters.isActive) {
+                                TextButton(onClick = { filters = CardFilters() }) {
+                                    Text(
+                                        "CLEAR FILTERS",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -450,6 +479,115 @@ private fun LabeledChips(label: String, chips: List<Pair<String, Color?>>) {
         SectionHeader(label)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             chips.forEach { (text, color) -> ColoredChip(text, color) }
+        }
+    }
+}
+
+@Composable
+private fun FilterPanel(
+    details: DeckDetails,
+    filters: CardFilters,
+    expanded: Boolean,
+    onToggleExpanded: () -> Unit,
+    onFiltersChange: (CardFilters) -> Unit,
+) {
+    Surface(
+        shape = PanelShape,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth().clickable(onClick = onToggleExpanded)
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(if (expanded) "▾" else "▸", color = MaterialTheme.colorScheme.primary)
+                Text("FILTERS", style = MaterialTheme.typography.labelLarge)
+                if (filters.isActive) {
+                    Text(
+                        "· ${filters.activeCount}",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+                if (filters.isActive) {
+                    Text(
+                        "CLEAR",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.clip(InsetShape)
+                            .clickable { onFiltersChange(CardFilters()) }
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                    )
+                }
+            }
+            if (expanded) {
+                Column(
+                    Modifier.padding(start = 14.dp, end = 14.dp, bottom = 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    if (details.deck.isHierarchical && details.levels.isNotEmpty()) {
+                        FilterChipGroup("Levels") {
+                            details.levels.forEach { level ->
+                                ColoredChip(
+                                    level.displayName,
+                                    level.color?.toColor(),
+                                    selected = level.id in filters.levelIds,
+                                    onClick = { onFiltersChange(filters.copy(levelIds = filters.levelIds.toggled(level.id))) },
+                                )
+                            }
+                            ColoredChip(
+                                "No level",
+                                null,
+                                selected = null in filters.levelIds,
+                                onClick = { onFiltersChange(filters.copy(levelIds = filters.levelIds.toggled(null))) },
+                            )
+                        }
+                    }
+                    if (details.tags.isNotEmpty()) {
+                        FilterChipGroup("Tags") {
+                            details.tags.forEach { tag ->
+                                ColoredChip(
+                                    tag.name,
+                                    tag.color?.toColor(),
+                                    selected = tag.id in filters.tagIds,
+                                    onClick = { onFiltersChange(filters.copy(tagIds = filters.tagIds.toggled(tag.id))) },
+                                )
+                            }
+                            ColoredChip(
+                                "Untagged",
+                                null,
+                                selected = null in filters.tagIds,
+                                onClick = { onFiltersChange(filters.copy(tagIds = filters.tagIds.toggled(null))) },
+                            )
+                        }
+                    }
+                    FilterChipGroup("Has") {
+                        ContentFilter.entries.forEach { filter ->
+                            ColoredChip(
+                                filter.label,
+                                null,
+                                selected = filter in filters.content,
+                                onClick = { onFiltersChange(filters.copy(content = filters.content.toggled(filter))) },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilterChipGroup(label: String, content: @Composable () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionHeader(label)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            content()
         }
     }
 }
